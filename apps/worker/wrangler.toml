@@ -1,4 +1,4 @@
-name = "aired"
+name = "aired-tgplaybook"
 main = "src/index.ts"
 compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat"]
@@ -9,17 +9,14 @@ directory = "../web"
 
 [[r2_buckets]]
 binding = "PAGES_BUCKET"
-bucket_name = "aired-pages"
+bucket_name = "aired-tgplaybook-pages"
 
 [[kv_namespaces]]
 binding = "PAGES_KV"
-id = "6388d6b3b6c04fe5ad8529ae029e723e"
+# TODO: replace with ID from `wrangler kv namespace create PAGES_KV`
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
 
-# Custom domain
-[[routes]]
-pattern = "aired.sh/*"
-zone_name = "aired.sh"
-
-[[routes]]
-pattern = "aired.sh"
-zone_name = "aired.sh"
+# Custom domain — uncomment and configure after adding a domain to Cloudflare
+# [[routes]]
+# pattern = "yourdomain.com/*"
+# zone_name = "yourdomain.com"

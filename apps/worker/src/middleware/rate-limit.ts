@@ -77,7 +77,7 @@ export async function rateLimitMiddleware(
 
   if (!allowed) {
     return c.json(
-      { error: "Rate limit exceeded. Maximum 5 uploads per hour." },
+      { error: `Rate limit exceeded. Maximum ${RATE_LIMIT} uploads per hour.` },
       429,
     );
   }
