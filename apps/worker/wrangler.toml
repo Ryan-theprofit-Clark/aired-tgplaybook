@@ -13,8 +13,7 @@ bucket_name = "aired-tgplaybook-pages"
 
 [[kv_namespaces]]
 binding = "PAGES_KV"
-# TODO: replace with ID from `wrangler kv namespace create PAGES_KV`
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+id = "c27bcf8a926145f58bf3cc0c99f43e61"
 
 # Custom domain — uncomment and configure after adding a domain to Cloudflare
 # [[routes]]
