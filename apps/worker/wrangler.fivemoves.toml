@@ -1,0 +1,36 @@
+name = "fivemoves"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-fivemoves-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "d64c74e0c07a4080ac23304b03133f84"
+
+# Custom domain for Bob Mathers' "Your Next Five Moves" workshop invitation
+# playbooks. Personalized pages publish at
+# https://invitation.fivemovesworkshop.com/p/{first-last}.
+# The zone fivemoveworkshop.com lives in Ryan's Cloudflare account
+# (bought 2026-08-13 for this campaign).
+[[routes]]
+pattern = "invitation.fivemovesworkshop.com"
+custom_domain = true
+
+[vars]
+# Where /r/:slug 303-redirects to after logging the click. The invitation
+# CTA currently links straight to the Systeme signup page, so this is only
+# used if a tracked /r/ link is introduced later. Keep in sync with
+# LANDING_URL in the project's publish_one.py.
+REDIRECT_DESTINATION = "https://bobmathers.systeme.io/fivemoves"
+
+# CLICK_LOG_KEY is set as a wrangler secret (not stored in this file).
+# Set with:
+#   echo "<random_key>" | wrangler secret put CLICK_LOG_KEY --config wrangler.fivemoves.toml

@@ -1,0 +1,25 @@
+name = "mercury"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-mercury-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "1efd7c5d77d24918a29441430610b8f6"
+
+# Custom domain for Wendy Rosenthal's Mercury Reading pages (Pathfinder 1to1).
+# Personalized readings publish at https://mercury.the-sovereign-executive.com/p/{first-last}.
+# Project: ~/Documents/pathfinder-chart-outreach (mercury-reading/publish.py).
+# Created 2026-10-07. Separate from the "sovereign" worker, which still serves the
+# workshop invitations at invitation.the-sovereign-executive.com.
+[[routes]]
+pattern = "mercury.the-sovereign-executive.com"
+custom_domain = true

@@ -1,0 +1,29 @@
+name = "marketmessiah"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-marketmessiah-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "49cbbf4158e248eba03fcccb6809f613"
+
+[[routes]]
+pattern = "invitation.marketmessiahmethod.com"
+custom_domain = true
+
+[vars]
+# Where /r/:slug 303-redirects to after logging the click. Note the trailing
+# slash; the redirect appends any incoming querystring directly.
+REDIRECT_DESTINATION = "https://marketmessiah.systeme.io/whale-clients"
+
+# CLICK_LOG_KEY is set as a wrangler secret (not stored in this file).
+# Set with:
+#   echo "<random_key>" | wrangler secret put CLICK_LOG_KEY --config wrangler.marketmessiah.toml

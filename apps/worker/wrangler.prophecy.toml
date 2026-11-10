@@ -1,0 +1,28 @@
+name = "prophecy"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+# Third tenant of this codebase (after "playbook" and "mirror"), added
+# 2026-09-01: The Prophecy — the Mirror email funnel's second asset
+# (~/mirror-email-outreach/engine/prophecy_pipeline/). Its own KV and R2 so
+# Prophecy pages publish at bare /<first-last> without colliding with the
+# Mirror tenant, where <first-last> IS the prospect's Mirror.
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-prophecy-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "a02c041d25e84013bb2e98db7efe32ea"
+
+# Every custom domain that should stay live MUST be declared here — wrangler
+# reconciles routes/domains on deploy (same warning as wrangler.toml).
+[[routes]]
+pattern = "prophecy.marketmessiahmethod.com"
+custom_domain = true

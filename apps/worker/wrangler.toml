@@ -15,7 +15,47 @@ bucket_name = "aired-tgplaybook-pages"
 binding = "PAGES_KV"
 id = "c27bcf8a926145f58bf3cc0c99f43e61"
 
-# Custom domain — uncomment and configure after adding a domain to Cloudflare
-# [[routes]]
-# pattern = "yourdomain.com/*"
-# zone_name = "yourdomain.com"
+# Custom domains attached to this worker.
+# IMPORTANT: wrangler reconciles routes/domains on deploy — every custom
+# domain that should be live MUST be declared here, or it will be removed
+# from the worker on the next `wrangler deploy`. Do not assume dashboard-
+# configured custom domains will be preserved.
+#
+# mmi.marketmessiahmethod.com — clean-URL host for MMI Visual sales docs.
+# The worker serves bare `/:slug` requests on `mmi.*` hosts (see viewer.ts),
+# so visuals are published at https://mmi.marketmessiahmethod.com/<slug>.
+[[routes]]
+pattern = "mmi.marketmessiahmethod.com"
+custom_domain = true
+
+# proposal.marketmessiahmethod.com — clean-URL host for client proposals.
+# Shares this worker's KV and R2 with mmi.*, so a page published through
+# either host is served by both (see isCleanUrlHost in routes/viewer.ts).
+[[routes]]
+pattern = "proposal.marketmessiahmethod.com"
+custom_domain = true
+
+# roadmap.marketmessiahmethod.com — clean-URL host for client project roadmaps
+# (engagement timeline, deliverables, who owns what). A roadmap is its own asset
+# type, not a proposal, so it gets its own host (Ryan, 2026-09-03). Shares this
+# worker's KV and R2 with mmi.* and proposal.*, so slugs are drawn from one
+# namespace across all three — keep roadmap slugs in `<client>-phase-<n>` form.
+[[routes]]
+pattern = "roadmap.marketmessiahmethod.com"
+custom_domain = true
+
+# intro.marketmessiahmethod.com — clean-URL host for The Introduction: referral +
+# reoffer pages to Ryan's coffee chats and clients (Ryan, 2026-09-07). Own host
+# because it is its own asset type; same worker, KV and R2 as mmi./proposal./
+# roadmap., so slugs share that one namespace — keep intro slugs `<first-last>`.
+[[routes]]
+pattern = "intro.marketmessiahmethod.com"
+custom_domain = true
+
+# playbook.marketmessiahmethod.com — legacy `/p/{id}` host used by the TG
+# Playbook automation pipeline (see ~/Documents/playbook-automation/).
+# All existing playbook URLs in Lemlist outreach depend on this hostname
+# continuing to resolve — keep it declared here.
+[[routes]]
+pattern = "playbook.marketmessiahmethod.com"
+custom_domain = true

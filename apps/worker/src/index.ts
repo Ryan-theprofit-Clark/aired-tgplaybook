@@ -6,6 +6,9 @@ import { viewer } from "./routes/viewer.js";
 import { report } from "./routes/report.js";
 import { handleMcp } from "./routes/mcp.js";
 import { og } from "./routes/og.js";
+import { redirect } from "./routes/redirect.js";
+import { mirror } from "./routes/mirror.js";
+import { signup } from "./routes/signup.js";
 
 const app = new Hono<AppBindings>();
 
@@ -28,6 +31,21 @@ app.onError((err, c) => {
 // Health check
 app.get("/health", (c) => c.json({ status: "ok" }));
 
+// Favicon: Market Messiah hosts get the agency mark (web/mm-favicon.png).
+// Every other host keeps the aired product icon (web/favicon.ico). Safari
+// ignores the data-URI icon inlined in published pages and falls back to
+// this root path, so without the host check MM pages show the aired icon.
+app.get("/favicon.ico", (c) => {
+  if (!c.env.ASSETS) return c.json({ error: "Not found" }, 404);
+  const host = c.req.header("host") ?? "";
+  if (host.endsWith(".marketmessiahmethod.com")) {
+    const url = new URL(c.req.url);
+    url.pathname = "/mm-favicon.png";
+    return c.env.ASSETS.fetch(new Request(url.toString(), c.req.raw));
+  }
+  return c.env.ASSETS.fetch(c.req.raw);
+});
+
 // MCP Streamable HTTP endpoint
 app.all("/mcp", handleMcp);
 
@@ -37,6 +55,15 @@ app.route("/", og);
 // Mount API routes
 app.route("/api", api);
 app.route("/api", report);
+// Workshop sign-up into the client's systeme.io (off unless SYSTEME_API_KEY and SYSTEME_SIGNUP_TAG_ID are set).
+app.route("/api", signup);
+
+// Tracked redirect: /r/:slug logs the click and 302s to Michela's registration page
+app.route("/", redirect);
+
+// The Mirror diagnostic quiz (no-ops unless MIRROR_QUIZ = "1" in the config).
+// Mounted before the viewer so /start and /d/:slug win on the mirror host.
+app.route("/", mirror);
 
 // Mount viewer routes
 app.route("/", viewer);

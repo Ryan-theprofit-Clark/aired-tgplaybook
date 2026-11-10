@@ -1,0 +1,34 @@
+name = "bigknows"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-bigknows-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "7b7eaee1e76b4f06b230cb15d09f0e8e"
+
+# Custom domain for Simon Calderbank's "Hidden Neuroscience" masterclass
+# invitation playbooks. Personalized pages publish at
+# https://invitation.big-knows-masterclass.com/p/{first-last}.
+[[routes]]
+pattern = "invitation.big-knows-masterclass.com"
+custom_domain = true
+
+[vars]
+# Where /r/:slug 303-redirects to after logging the click. The invitation
+# CTA links straight to the masterclass registration page, so this is only
+# used if a tracked /r/ link is introduced later. Keep in sync with
+# LANDING_URL in the project's publish_one.py.
+REDIRECT_DESTINATION = "https://mindset.big-knows.co.uk/masterclass-june"
+
+# CLICK_LOG_KEY is set as a wrangler secret (not stored in this file).
+# Set with:
+#   echo "<random_key>" | wrangler secret put CLICK_LOG_KEY --config wrangler.bigknows.toml

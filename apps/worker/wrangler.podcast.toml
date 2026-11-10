@@ -1,0 +1,20 @@
+name = "podcast"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-podcast-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "6e886c6b1bbf4dd29fe62787ac4d346e"
+
+[[routes]]
+pattern = "podcast.marketmessiahmethod.com"
+custom_domain = true

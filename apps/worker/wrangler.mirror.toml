@@ -1,0 +1,35 @@
+name = "mirror"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+# Run the worker before static assets so GET / hits the quiz redirect
+# (routes/mirror.ts) instead of serving the aired homepage from ../web.
+run_worker_first = true
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-mirror-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "9d05177524e04677b3cfca9fe3379b3a"
+
+[[routes]]
+pattern = "mirror.marketmessiahmethod.com"
+custom_domain = true
+
+[vars]
+# Enables the Mirror diagnostic quiz routes (src/routes/mirror.ts):
+# GET /d/:slug, GET /start, POST /api/mirror/capture, GET /api/mirror/leads.
+MIRROR_QUIZ = "1"
+# Page tracking (~/page-tracking): every Mirror served here loads seen.js unless it already has it, so the Ad Mirror
+# pages' time on page, scroll, and Book a call clicks reach the Campaign Desk (Ryan's go, 2026-10-21).
+SEEN_KIND = "mirror-served"
+
+# CLICK_LOG_KEY guards /api/mirror/leads and /api/mirror/views. Set as a
+# wrangler secret (plaintext copy: the-mirror-outreach/.click_log_key):
+#   cat .click_log_key | npx wrangler secret put CLICK_LOG_KEY --config wrangler.mirror.toml

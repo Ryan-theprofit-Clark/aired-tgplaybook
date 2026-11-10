@@ -1,0 +1,33 @@
+name = "milliondollarproducer"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-milliondollarproducer-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "7bfb58dd4de9481d8883243fa04f3d28"
+
+[[routes]]
+pattern = "invitation.milliondollarproducersession.com"
+custom_domain = true
+
+[vars]
+# Where /r/:slug 303-redirects to after logging the click. Wally's Taster
+# Session landing page. Trailing querystring is preserved by the redirect.
+REDIRECT_DESTINATION = "https://marketmessiah.systeme.io/wally-bressler"
+
+# utm_campaign value stamped onto the CTA redirect so the landing page can
+# attribute registrations to this campaign. utm_content is the per-prospect slug.
+REDIRECT_UTM_CAMPAIGN = "million_dollar_producer_session"
+
+# CLICK_LOG_KEY is set as a wrangler secret (not stored in this file).
+# Set with:
+#   echo "<random_key>" | wrangler secret put CLICK_LOG_KEY --config wrangler.milliondollarproducer.toml

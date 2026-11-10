@@ -6,10 +6,186 @@ import { loadStats, saveStats } from "../lib/stats.js";
 
 const viewer = new Hono<AppBindings>();
 
-// GET /p/:id — serve the published HTML page
-viewer.get("/p/:id", async (c) => {
-  const id = c.req.param("id");
+// Paths reserved by the worker — never treat these as page slugs on the
+// clean-URL hostname. Anything with a file extension is also reserved.
+const RESERVED_ROOT_SLUGS = new Set([
+  "health", "mcp", "p", "r", "api", "og",
+  "start", "d", // Mirror diagnostic quiz routes (routes/mirror.ts)
+  "favicon.ico", "robots.txt", "index.html", "app.js", "style.css",
+]);
 
+// Hosts on which a bare `/:slug` request serves a published page directly
+// (i.e. without the `/p/` prefix). All other hosts keep the original
+// `/p/:id` behavior so static assets at root paths still resolve.
+function isCleanUrlHost(host: string | undefined | null): boolean {
+  if (!host) return false;
+  return (
+    host.startsWith("mmi.") ||
+    // Client proposals, served at bare /<client-slug>. Same worker, KV and R2
+    // as mmi.*, so a page published via mmi. is reachable on both hosts.
+    host.startsWith("proposal.") ||
+    // Client project roadmaps (engagement timeline, deliverables, ownership).
+    // Own host because a roadmap is a different asset type from a proposal, but
+    // the same worker, KV and R2 (Ryan, 2026-09-03), so one slug namespace is
+    // shared with mmi.* and proposal.* — roadmap slugs are `<client>-phase-<n>`.
+    host.startsWith("roadmap.") ||
+    // The Introduction: referral + reoffer pages for Ryan's coffee chats and
+    // clients (Ryan, 2026-09-07). Same worker, KV and R2 — one slug namespace.
+    host.startsWith("intro.") ||
+    // The Playbook: podcast guest invitations (V2, 2026-09-03) publish with a
+    // first-last slug and serve at bare /<first-last>. The 51 May-2026 pages at
+    // /p/<id> keep working; /p/<slug> also still resolves.
+    host.startsWith("podcast.") ||
+    host === "invitation.milliondollarproducersession.com" ||
+    // Bob Mathers "Your Next Five Moves" invitations, served at bare
+    // /<first-last> (Ryan, 2026-08-14). /p/:slug still works as a fallback.
+    host === "invitation.fivemovesworkshop.com" ||
+    // Michela Quilici's Flowing Founder assets (referral partner page, workshop
+    // invitations) serve at bare /<slug> (Ryan, 2026-08-20). The apex only hosts
+    // the generic aired landing page, so nothing at root collides with a slug.
+    // /p/:slug keeps working, so every link already sent stays valid.
+    host === "flowingfounder.com" ||
+    host === "www.flowingfounder.com" ||
+    host === "invitation.flowingfounder.com" ||
+    // Published Mirror artifacts serve at bare /<first-last> (P3 pipeline);
+    // the diagnostic quiz owns /d/:slug and /start via routes/mirror.ts.
+    host === "mirror.marketmessiahmethod.com" ||
+    // The Prophecy (email funnel second asset) serves at bare /<first-last>
+    // on its OWN tenant (wrangler.prophecy.toml, own KV+R2) so short slugs
+    // cannot collide with the Mirror tenant's pages (Ryan, 2026-09-01).
+    host === "prophecy.marketmessiahmethod.com" ||
+    // O Espelho: the Brazilian Portuguese Mirror, serving at bare /<first-last>
+    // on its OWN tenant (wrangler.espelho.toml, own KV+R2) so a Brazilian
+    // prospect's slug cannot overwrite an English-campaign Mirror with the same
+    // name (Ryan, 2026-09-21) — same reasoning as the Prophecy tenant above.
+    host === "espelho.marketmessiahmethod.com" ||
+    // John Whitt's Freedom Gambit invitations serve at bare /<first-last>
+    // (Ryan, 2026-09-03). The 2,058 pages already sent in the June and August
+    // rounds carry /p/<slug> links, and /p/:slug keeps working, so every link
+    // already in someone's inbox stays valid.
+    host === "invitation.thefreedomgambit.com" ||
+    // Wendy Rosenthal's Sovereign Executive Advantage invitations serve at bare
+    // /<first-last> from the Nov 5 round (Ryan, 2026-10-27). The June pages went
+    // out as /p/<slug>, and /p/:slug keeps working, so those links stay valid.
+    host === "invitation.the-sovereign-executive.com"
+  );
+}
+
+// Mirror artifact view log — one row per page open, on the Mirror host only.
+// The slug IS the prospect, so logging the slug alone is enough to attribute an
+// open to a person and (offline, via mirror-send-list-v2.csv) to the A/B CTA
+// version their page shipped with. Nothing needs to ride in the URL.
+//
+// The payload lives in KV *metadata*, not the value, so the dump endpoint can
+// page through with list() alone — no get() per key. That per-key read is what
+// makes the legacy `mirrorview:` dump (routes/mirror.ts dumpPrefix) time out.
+//
+// Bots are flagged, not dropped: LinkedIn fetches the page to build the DM link
+// preview, so every prospect would otherwise show a phantom open at send time.
+const VIEW_BOTS =
+  /bot|crawler|spider|preview|facebookexternalhit|slackbot|whatsapp|telegram|discord|embedly|curl|wget|python-requests|headless/i;
+
+function logArtifactView(c: any, slug: string): Promise<unknown> {
+  const host = c.req.header("Host") ?? "";
+  const ua = c.req.header("user-agent") ?? "";
+  const ts = new Date().toISOString();
+  if (host === "mirror.marketmessiahmethod.com") {
+    return c.env.PAGES_KV.put(
+      `mview:${ts}:${slug}:${Math.random().toString(36).slice(2, 8)}`,
+      "",
+      {
+        expirationTtl: 60 * 60 * 24 * 180,
+        metadata: {
+          slug,
+          ts,
+          country: (c.req.header("cf-ipcountry") ?? "XX").toUpperCase(),
+          ref: (c.req.header("referer") ?? "").slice(0, 120),
+          ua: ua.slice(0, 180),
+          bot: VIEW_BOTS.test(ua) || ua === "",
+        },
+      },
+    ).catch(() => {});
+  }
+  // Five Moves invitation views (fmview:) — same KV-metadata pattern as the
+  // Mirror. `v` attributes the click to the DM variation that carried the
+  // link: the A DM links ?v=a, the B DM links ?v=b, anything without the
+  // param (preview page, shares) is "direct" and stays out of the A/B math.
+  // Bots are flagged, not dropped: LinkedIn fetches the page to build the DM
+  // link preview, so every lead would otherwise show a phantom open at send.
+  if (host === "invitation.fivemovesworkshop.com") {
+    const q = c.req.query("v");
+    return c.env.PAGES_KV.put(
+      `fmview:${ts}:${slug}:${Math.random().toString(36).slice(2, 8)}`,
+      "",
+      {
+        expirationTtl: 60 * 60 * 24 * 180,
+        metadata: {
+          slug,
+          ts,
+          v: q === "a" ? "a" : q === "b" ? "b" : "direct",
+          country: (c.req.header("cf-ipcountry") ?? "XX").toUpperCase(),
+          ua: ua.slice(0, 180),
+          bot: VIEW_BOTS.test(ua) || ua === "",
+        },
+      },
+    ).catch(() => {});
+  }
+  // Sovereign Executive Advantage invitation opens (sview:), Wendy's Nov 5 round
+  // (Ryan, 2026-10-27: "who has clicked the link for their invitation and how many
+  // times"). Same KV-metadata pattern; bots flagged, not dropped, because LinkedIn
+  // fetches every DM link once to draw the preview. /api/invite-views reads them.
+  if (host === "invitation.the-sovereign-executive.com") {
+    return c.env.PAGES_KV.put(
+      `sview:${ts}:${slug}:${Math.random().toString(36).slice(2, 8)}`,
+      "",
+      {
+        expirationTtl: 60 * 60 * 24 * 180,
+        metadata: {
+          slug,
+          ts,
+          country: (c.req.header("cf-ipcountry") ?? "XX").toUpperCase(),
+          ref: (c.req.header("referer") ?? "").slice(0, 120),
+          ua: ua.slice(0, 180),
+          bot: VIEW_BOTS.test(ua) || ua === "",
+        },
+      },
+    ).catch(() => {});
+  }
+  return Promise.resolve();
+}
+
+// Page tracking ("seen", ~/page-tracking): on a worker whose config sets SEEN_KIND, every page it serves loads the
+// tracker, unless the page already carries it (the Astrolabe Mirrors do). The tracker names any Calendly link "book",
+// so a click on a page's Book a call button is counted. Ryan's go for the Mirror worker, 2026-10-21.
+const SEEN = "https://seen.marketmessiahmethod.com";
+function injectSeen(html: string, kind: string): string {
+  if (html.includes(`${SEEN}/seen.js`)) return html;
+  const tag = `<script defer src="${SEEN}/seen.js" data-url="${SEEN}/e" data-kind="${kind}" data-ver="served"></script>`;
+  const i = html.toLowerCase().lastIndexOf("</body>");
+  return i >= 0 ? html.slice(0, i) + tag + html.slice(i) : html + tag;
+}
+
+// MMI breakdowns and walkthroughs (Ryan, 2026-11-10: "Yes, add tracking", after asking whether Sharon Lewis had opened
+// hers). Only the mmi. host: proposal., roadmap., intro., and playbook. share this worker and stay untracked. Slugs
+// starting walkthrough-for- are "mmi-walkthrough" (the tracker reads the video: played, how far); everything else on
+// the host is "mmi". The ids both builders already write become the tracker's sections, and the walkthrough's two
+// breakdown buttons get click names, so every page already published is covered without a republish.
+const MMI_SECTION = /<(?:section|div|header|footer|main|nav)\b[^>]*?\sid="(top|map|documents|prologue|gears|sec-0[1-8]|bottom-line|case|open)"/g;
+const MMI_CLICK: Record<string, string> = { "wt-btn": "breakdown", "wt-dock": "breakdown-dock" };
+function seenKindFor(c: any, id: string): string | null {
+  if (c.env.SEEN_KIND) return c.env.SEEN_KIND;
+  if ((c.req.header("Host") ?? "") !== "mmi.marketmessiahmethod.com") return null;
+  return id.startsWith("walkthrough-for-") ? "mmi-walkthrough" : "mmi";
+}
+function markMmi(html: string): string {
+  return html
+    .replace(MMI_SECTION, (m: string, name: string) => (m.includes("data-seen=") ? m : `${m} data-seen="${name}"`))
+    .replace(/<a\b[^>]*?\sid="(wt-btn|wt-dock)"/g, (m: string, name: string) =>
+      m.includes("data-seen-click=") ? m : `${m} data-seen-click="${MMI_CLICK[name]}"`);
+}
+
+// Core page-serving logic — shared by `/p/:id` and the clean-URL `/:slug` route.
+async function servePage(c: any, id: string): Promise<Response> {
   const raw = await c.env.PAGES_KV.get(`page:${id}`);
   if (raw === null) {
     return c.text("Page not found", 404);
@@ -83,6 +259,7 @@ viewer.get("/p/:id", async (c) => {
         if (stats.recent.length > 20) stats.recent.length = 20;
         await saveStats(c.env.PAGES_KV, stats);
       })(),
+      logArtifactView(c, id),
     ]).catch(() => {}),
   );
 
@@ -99,7 +276,29 @@ viewer.get("/p/:id", async (c) => {
     readCount: newReadCount,
   });
 
-  return new Response(wrappedHtml, { status: 200, headers });
+  const kind = seenKindFor(c, id);
+  const finalHtml = kind ? injectSeen(kind.startsWith("mmi") ? markMmi(wrappedHtml) : wrappedHtml, kind) : wrappedHtml;
+  return new Response(finalHtml, { status: 200, headers });
+}
+
+// GET /p/:id — serve the published HTML page (original URL scheme)
+viewer.get("/p/:id", async (c) => {
+  return servePage(c, c.req.param("id"));
+});
+
+// GET /:slug — clean-URL serve (e.g. mmi.marketmessiahmethod.com/vincent).
+// Only enabled on hostnames that opt in (see isCleanUrlHost). Reserved root
+// paths and anything with a file extension fall through to other routes
+// or the static asset handler.
+viewer.get("/:slug", async (c) => {
+  if (!isCleanUrlHost(c.req.header("Host"))) {
+    return c.notFound();
+  }
+  const slug = c.req.param("slug");
+  if (RESERVED_ROOT_SLUGS.has(slug) || slug.includes(".")) {
+    return c.notFound();
+  }
+  return servePage(c, slug);
 });
 
 // POST /p/:id/verify-pin — verify PIN, set cookie, redirect
@@ -174,7 +373,7 @@ function injectAiredBar(
   const ogTags = `
   <!-- aired OG tags -->
   <meta property="og:title" content="${escapeAttr(title)}" />
-  <meta property="og:description" content="Shared via aired.sh — publish HTML artifacts instantly." />
+  <meta property="og:description" content="Shared via aired.sh. Publish HTML artifacts instantly." />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="${ogImageUrl}" />
   <meta property="og:image:width" content="1200" />
@@ -182,11 +381,17 @@ function injectAiredBar(
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="${ogImageUrl}" />`;
 
-  // Inject OG tags before </head>
-  let out = html.replace(/<\/head>/i, `${ogTags}\n</head>`);
-  // If no </head>, prepend at the top (best-effort)
-  if (out === html) {
-    out = ogTags + "\n" + html;
+  // Inject default OG tags before </head>, but only if the page does not
+  // already define its own og:title. Pages that bring their own Open Graph
+  // metadata (e.g. personalized invitation pages) keep full control of their
+  // link preview instead of getting the generic aired defaults.
+  let out = html;
+  if (!/property=["']og:title["']/i.test(html)) {
+    out = html.replace(/<\/head>/i, `${ogTags}\n</head>`);
+    // If no </head>, prepend at the top (best-effort)
+    if (out === html) {
+      out = ogTags + "\n" + html;
+    }
   }
 
   const bar = `
