@@ -1,0 +1,29 @@
+name = "espelho"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+# Tenant added 2026-09-21: O Espelho — the Brazilian Portuguese Mirror
+# (~/Documents/the-mirror-outreach/pt-pilot/). Its OWN KV and R2, following the
+# same reasoning that gave The Prophecy its own tenant on 2026-09-01: Espelho
+# pages publish at bare /<first-last>, and on the Mirror tenant <first-last> IS
+# an English-campaign prospect's Mirror. A Brazilian and an American prospect
+# who share a name would otherwise overwrite each other's page.
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-espelho-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "50a84ae7462740e7a457b1f44449a473"
+
+# Every custom domain that should stay live MUST be declared here — wrangler
+# reconciles routes/domains on deploy (same warning as wrangler.toml).
+[[routes]]
+pattern = "espelho.marketmessiahmethod.com"
+custom_domain = true

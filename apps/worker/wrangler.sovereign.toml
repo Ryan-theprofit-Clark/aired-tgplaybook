@@ -1,0 +1,47 @@
+name = "sovereign"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-sovereign-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "ac37125a202c459aa3d28b9d588489aa"
+
+# Custom domain for the Pathfinder 1to1 / Sovereign Executive Advantage
+# workshop invitation playbooks. Personalized pages serve at
+# https://invitation.the-sovereign-executive.com/{first-last} (clean URL, viewer.ts);
+# the June round's /p/{first-last} links keep working.
+[[routes]]
+pattern = "invitation.the-sovereign-executive.com"
+custom_domain = true
+
+[vars]
+# Where /r/:slug 303-redirects to after logging the click. The invitation
+# CTA currently links straight to the registration page, so this is only
+# used if a tracked /r/ link is introduced later. Keep in sync with
+# LANDING_URL in the project's publish_one.py.
+# Ryan, 2026-10-27: the systeme page is her correct landing page (the Wix page says July 24th).
+REDIRECT_DESTINATION = "https://pathfinder1to1.systeme.io/advantage"
+
+# Page tracking ("seen", ~/page-tracking): every invitation this worker serves loads the tracker (time on page,
+# scroll depth, sections, clicks, real person or scanner). Ryan, 2026-10-27: "as much tracking as we can get".
+SEEN_KIND = "sovereign-invite"
+# utm_campaign on the /r/{slug} hop to the systeme page, so a registration can be tied to the person.
+REDIRECT_UTM_CAMPAIGN = "sovereign_nov5"
+# Workshop sign-up page on this domain (Ryan, 2026-11-06): POST /api/signup creates the contact in Wendy's systeme
+# and adds this tag; a systeme automation rule on the tag adds "October Lead" and starts the pre-webinar sequence,
+# like her own systeme form. Tag "Signed up on invitation site" (id 2275957). SYSTEME_API_KEY is a wrangler secret
+# (a systeme Public API key from Wendy's account, Settings > MCP & API keys); /api/signup stays off until it is set.
+SYSTEME_SIGNUP_TAG_ID = "2275957"
+
+# CLICK_LOG_KEY is set as a wrangler secret (not stored in this file).
+# Set with:
+#   echo "<random_key>" | wrangler secret put CLICK_LOG_KEY --config wrangler.sovereign.toml

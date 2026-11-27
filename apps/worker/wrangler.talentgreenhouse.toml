@@ -1,0 +1,33 @@
+name = "talentgreenhouse"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-talentgreenhouse-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "e679f749d42d4d24a27a8a72601529b4"
+
+[[routes]]
+pattern = "invitation.thetalentgreenhouse.com"
+custom_domain = true
+
+[vars]
+# Where /r/:slug 303-redirects to after logging the click. Note the trailing
+# slash; the redirect appends any incoming querystring directly.
+REDIRECT_DESTINATION = "https://www.thebestleadershipcompany.com/leadership-diagnostic-workshop/"
+
+# utm_campaign value stamped onto the CTA redirect so the landing page can
+# attribute registrations to this campaign. utm_content is the per-prospect slug.
+REDIRECT_UTM_CAMPAIGN = "leadership_diagnostic_workshop"
+
+# CLICK_LOG_KEY is set as a wrangler secret (not stored in this file).
+# Set with:
+#   echo "<random_key>" | wrangler secret put CLICK_LOG_KEY --config wrangler.talentgreenhouse.toml

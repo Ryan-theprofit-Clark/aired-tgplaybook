@@ -1,0 +1,37 @@
+name = "the-ten-hour-advisor"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-amanda-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "48c12d079bc9434e978030edcf4b1a2c"
+
+# Amanda C. Watts's masterclass invitations, "The Ten-Hour Advisor", 16 December 2026
+# (~/Documents/amanda-watts-workshop-outreach). Her domain, set up in Cloudflare (Ryan, 2026-11-27).
+# Personal pages serve at https://the-ten-hour-advisor.com/{first-last} (clean URL, viewer.ts).
+[[routes]]
+pattern = "the-ten-hour-advisor.com"
+custom_domain = true
+
+[[routes]]
+pattern = "www.the-ten-hour-advisor.com"
+custom_domain = true
+
+[vars]
+# Where /r/:slug 303-redirects after logging the click: Amanda's registration page (form opens on it).
+REDIRECT_DESTINATION = "https://info.businessadvisoracademy.com/10-hour-advisor"
+# Page tracking ("seen", ~/page-tracking): every invitation this worker serves loads the tracker.
+SEEN_KIND = "amanda-invite"
+# utm_campaign on the /r/{slug} hop, so a registration can be tied to the person.
+REDIRECT_UTM_CAMPAIGN = "amanda_dec16"
+
+# CLICK_LOG_KEY is set as a wrangler secret (not stored in this file).

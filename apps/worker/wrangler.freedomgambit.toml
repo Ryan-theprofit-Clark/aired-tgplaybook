@@ -1,0 +1,20 @@
+name = "freedomgambit"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-freedomgambit-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "b9e120d6d47249e5a5a2e4ff06d8c401"
+
+[[routes]]
+pattern = "invitation.thefreedomgambit.com"
+custom_domain = true

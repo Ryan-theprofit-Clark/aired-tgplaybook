@@ -1,0 +1,24 @@
+name = "sovereign-briefing"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-sovereign-briefing-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "04c3f4f2ae1b4397809722fa0971a5ea"
+
+# Custom domain for Wendy Rosenthal's Three-Week Briefing pages (Pathfinder 1to1).
+# Personalized pages publish at https://briefing.the-sovereign-executive.com/p/{first-last}.
+# Project: ~/Documents/pathfinder-chart-outreach (briefing/publish.py). Created 2026-10-08.
+# Separate from "sovereign" (workshop invitations) and "mercury" (the rejected astrology samples).
+[[routes]]
+pattern = "briefing.the-sovereign-executive.com"
+custom_domain = true

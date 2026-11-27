@@ -1,0 +1,37 @@
+name = "founder-first-scaling"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-garry-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "d3d17d32d47f4d86a8f69001a958e532"
+
+# Garry Crosby's masterclass invitations, "Founder-First Scaling", December 10, 2026
+# (~/Documents/garry-crosby-workshop-outreach). Ryan bought the domain for them on 2026-11-23.
+# Personal pages serve at https://founder-first-scaling.com/{first-last} (clean URL, viewer.ts).
+[[routes]]
+pattern = "founder-first-scaling.com"
+custom_domain = true
+
+[[routes]]
+pattern = "www.founder-first-scaling.com"
+custom_domain = true
+
+[vars]
+# Where /r/:slug 303-redirects after logging the click: Garry's registration page.
+REDIRECT_DESTINATION = "https://garrycrosby.systeme.io/founder"
+# Page tracking ("seen", ~/page-tracking): every invitation this worker serves loads the tracker.
+SEEN_KIND = "garry-invite"
+# utm_campaign on the /r/{slug} hop, so a registration can be tied to the person.
+REDIRECT_UTM_CAMPAIGN = "garry_dec10"
+
+# CLICK_LOG_KEY is set as a wrangler secret (not stored in this file).

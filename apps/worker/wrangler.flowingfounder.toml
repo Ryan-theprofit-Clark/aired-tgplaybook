@@ -1,0 +1,28 @@
+name = "flowingfounder"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "../web"
+
+[[r2_buckets]]
+binding = "PAGES_BUCKET"
+bucket_name = "aired-flowingfounder-pages"
+
+[[kv_namespaces]]
+binding = "PAGES_KV"
+id = "b6051637eca348599194707f0eca32a4"
+
+[[routes]]
+pattern = "flowingfounder.com"
+custom_domain = true
+
+[[routes]]
+pattern = "www.flowingfounder.com"
+custom_domain = true
+
+[[routes]]
+pattern = "invitation.flowingfounder.com"
+custom_domain = true
